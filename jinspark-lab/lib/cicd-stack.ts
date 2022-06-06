@@ -1,0 +1,88 @@
+import { Duration, NestedStack, NestedStackProps, SecretValue } from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
+import { Repository } from 'aws-cdk-lib/aws-ecr';
+import { FargateService } from 'aws-cdk-lib/aws-ecs';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+
+export class CICDStack extends NestedStack {
+  constructor(scope: Construct, id: string, bucket: Bucket, containerRepo: Repository, service:FargateService, props?: NestedStackProps) {
+    super(scope, id, props);
+
+    const pipeline = new codepipeline.Pipeline(scope, 'JinsparkLabPipeline', {
+      pipelineName: 'jinspark-lab-pipeline',
+      restartExecutionOnUpdate: true,
+      artifactBucket: bucket
+    });
+
+    const sourceOutput = new codepipeline.Artifact();
+    const sourceAction = new codepipelineActions.GitHubSourceAction({
+      actionName: 'GithubSource',
+      owner: 'jinspark-lab',
+      repo: 'jinspark-lab',
+      oauthToken: SecretValue.secretsManager('github-token'),   //Secret Key should not be stored in Key-Value format.
+      output: sourceOutput,
+      branch: 'main'
+    });
+    pipeline.addStage({
+      stageName: 'Source',
+      actions: [sourceAction]
+    });
+
+    const githubSource = codebuild.Source.gitHub({
+      owner: 'jinspark-lab',
+      repo: 'jinspark-lab'
+      // webhook: true,
+      // webhookFilters: [
+      //   codebuild.FilterGroup
+      //                       .inEventOf(codebuild.EventAction.PULL_REQUEST_MERGED)
+      //                       .andBranchIs('main')
+      // ]
+    });
+    const project = new codebuild.Project(scope, 'JinsparkLabBuild', {
+      source: githubSource,
+      buildSpec: codebuild.BuildSpec.fromSourceFilename('./buildspec.yaml'),
+      environment: {
+        buildImage: codebuild.LinuxBuildImage.STANDARD_3_0,
+        privileged: true
+      },
+      environmentVariables: {
+        ecr: {
+          value: containerRepo.repositoryUri
+        },
+        tag: {
+          value: '1.0'
+        }
+      }
+    });
+    containerRepo.grantPullPush(project);
+
+    const buildOutput = new codepipeline.Artifact();
+    const buildAction = new codepipelineActions.CodeBuildAction({
+      actionName: 'SpringBuild',
+      project,
+      input: sourceOutput,
+      outputs: [buildOutput]
+    });
+    pipeline.addStage({
+      stageName: 'Build',
+      actions: [buildAction]
+    });
+
+    const deployAction = new codepipelineActions.EcsDeployAction({
+      actionName: 'EcsDeploy',
+      service: service,
+      input: buildOutput,
+      // imageFile: buildOutput.atPath('imagedefinitions.json'),
+      deploymentTimeout: Duration.minutes(20)
+    });
+    pipeline.addStage({
+      stageName: 'Deploy',
+      actions: [
+        deployAction
+      ]
+    });
+ }
+}
