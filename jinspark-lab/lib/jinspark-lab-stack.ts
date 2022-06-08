@@ -14,7 +14,7 @@ export class JinsparkLabStack extends Stack {
 
     var bucketStack = new BucketStack(this, id + '-Bucket');
     var containerStack = new ContainerStack(this, id + '-Container');
-    var server = new ServerStack(this, id + '-Server', containerStack.containerRepo);
+    var server = new ServerStack(this, id + '-Server');
     var cicd = new CICDStack(this, id + '-CICD', 
                                   bucketStack.storage, 
                                   containerStack.containerRepo, 

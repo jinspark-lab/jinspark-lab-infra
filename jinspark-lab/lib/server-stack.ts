@@ -5,14 +5,13 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
-import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { FargateService } from 'aws-cdk-lib/aws-ecs';
 import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 
 export class ServerStack extends NestedStack {
   service:FargateService;
 
-  constructor(scope: Construct, id: string, containerRepo: Repository, props?: NestedStackProps) {
+  constructor(scope: Construct, id: string, props?: NestedStackProps) {
     super(scope, id, props);
 
     // ECS Deployment

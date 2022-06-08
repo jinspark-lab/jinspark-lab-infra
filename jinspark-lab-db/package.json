@@ -1,8 +1,8 @@
 {
-  "name": "jinspark-lab",
-  "version": "0.1.0",
+  "name": "jinspark-lab-db",
+  "version": "1.0.0",
   "bin": {
-    "jinspark-lab": "bin/jinspark-lab.js"
+    "jinspark-lab-db": "bin/jinspark-lab-db.js"
   },
   "scripts": {
     "build": "tsc",
