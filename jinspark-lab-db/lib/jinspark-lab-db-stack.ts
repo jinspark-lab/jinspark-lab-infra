@@ -33,7 +33,9 @@ export class JinsparkLabDbStack extends Stack {
       securityGroups: [
         securityGroup
       ],
-      credentials: rds.Credentials.fromPassword('admin', SecretValue.secretsManager('jinsparklab-db-secret'))
+      credentials: rds.Credentials.fromGeneratedSecret('admin', {
+        secretName: 'jinsparklab-rdb-secret'
+      })
     });
   }
 }

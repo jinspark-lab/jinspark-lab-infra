@@ -75,8 +75,7 @@ export class CICDStack extends NestedStack {
       actionName: 'EcsDeploy',
       service: service,
       input: buildOutput,
-      // imageFile: buildOutput.atPath('imagedefinitions.json'),
-      deploymentTimeout: Duration.minutes(20)
+      deploymentTimeout: Duration.minutes(60)
     });
     pipeline.addStage({
       stageName: 'Deploy',
