@@ -1,20 +1,23 @@
 import { Duration, NestedStack, NestedStackProps, SecretValue } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import { FargateService } from 'aws-cdk-lib/aws-ecs';
-import { Bucket } from 'aws-cdk-lib/aws-s3';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 export class CICDStack extends NestedStack {
-  constructor(scope: Construct, id: string, bucket: Bucket, containerRepo: Repository, service:FargateService, props?: NestedStackProps) {
+  constructor(scope: Construct, id: string, vpc: IVpc, containerRepo: Repository, service:FargateService, props?: NestedStackProps) {
     super(scope, id, props);
 
     const pipeline = new codepipeline.Pipeline(scope, 'JinsparkLabPipeline', {
       pipelineName: 'jinspark-lab-pipeline',
       restartExecutionOnUpdate: true,
-      artifactBucket: bucket
+      artifactBucket: s3.Bucket.fromBucketName(this, 'JinsparkLabFrontendArtifactBucket', 'jinspark-lab-infra-artifact-bucket')
     });
 
     const sourceOutput = new codepipeline.Artifact();
@@ -48,6 +51,7 @@ export class CICDStack extends NestedStack {
         buildImage: codebuild.LinuxBuildImage.STANDARD_3_0,
         privileged: true
       },
+      vpc,
       environmentVariables: {
         ecr: {
           value: containerRepo.repositoryUri
@@ -58,6 +62,16 @@ export class CICDStack extends NestedStack {
       }
     });
     containerRepo.grantPullPush(project);
+    project.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'secretsmanager:DescribeSecret',
+          'secretsmanager:GetSecretValue'
+        ],
+        resources: ['*'],
+        effect: iam.Effect.ALLOW
+      })
+    );
 
     const buildOutput = new codepipeline.Artifact();
     const buildAction = new codepipelineActions.CodeBuildAction({

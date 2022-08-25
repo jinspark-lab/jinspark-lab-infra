@@ -3,19 +3,21 @@ import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
 import { FargateService } from 'aws-cdk-lib/aws-ecs';
 import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 export class ServerStack extends NestedStack {
   service:FargateService;
 
-  constructor(scope: Construct, id: string, props?: NestedStackProps) {
+  constructor(scope: Construct, id: string, vpc: IVpc, props?: NestedStackProps) {
     super(scope, id, props);
 
     // ECS Deployment
-    const vpc = ec2.Vpc.fromLookup(scope, 'Default', { isDefault: true });
+    // const vpc = ec2.Vpc.fromLookup(scope, 'Default', { isDefault: true });
     const cluster = new ecs.Cluster(scope, 'Fargate', { vpc });
 
     const taskDefinitionRole = new iam.Role(scope, 'MyFargateExecutionRole', {
@@ -66,20 +68,30 @@ export class ServerStack extends NestedStack {
       protocol: ecs.Protocol.TCP
     });
 
-    const fargate = new ecs_patterns.ApplicationLoadBalancedFargateService(scope, "MyFargate", {
+    const alb = new elb.ApplicationLoadBalancer(scope, 'JinsparkLabAlb', {
+      loadBalancerName: 'JinsparkLab-ALB',
+      vpc,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC,
+        onePerAz: true
+      },
+      internetFacing: true
+    });
+
+    const fargate = new ecs_patterns.ApplicationLoadBalancedFargateService(scope, "JinsparkLabFargate", {
       cluster,
-      publicLoadBalancer: true,
       taskDefinition,
       taskSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_NAT,
         onePerAz: true      // Due to this configuration, it is recommended to set all Public/Private Subnets in AZs
-      }
-      // Empty Container 로 만들면 생성이 안되고, 이미지를 지정하자니 이미지가 CodeBuild 에서 만들어져서
-      // CI/CD 파이프라인에 등록되어있지 않아서 구동이 안됨
+      },
+      loadBalancer: alb,
+      publicLoadBalancer: true
     });
-    
     fargate.targetGroup.configureHealthCheck({
-      path: '/health'
+      path: '/health',
+      timeout: cdk.Duration.seconds(10),
+      interval: cdk.Duration.seconds(60)
     });
     const autoscaling = fargate.service.autoScaleTaskCount({
       minCapacity: 2,
@@ -93,7 +105,6 @@ export class ServerStack extends NestedStack {
 
     this.service = fargate.service;
     new cdk.CfnOutput(scope, 'LoadBalancerDns', { value: fargate.loadBalancer.loadBalancerDnsName });
-
     //
   }
 }

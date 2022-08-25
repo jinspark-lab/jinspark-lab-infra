@@ -11,6 +11,7 @@ export class BucketStack extends NestedStack {
 
     // Change bucket name global unique.
     const bucket = new s3.Bucket(this, 'jinspark-lab-infra-artifact-bucket', {
+        bucketName: 'jinspark-lab-infra-artifact-bucket',
         encryption: s3.BucketEncryption.S3_MANAGED,
         blockPublicAccess: new s3.BlockPublicAccess({
             blockPublicPolicy: true
