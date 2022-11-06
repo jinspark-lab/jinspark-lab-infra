@@ -1,14 +1,17 @@
 import { NestedStack, NestedStackProps, } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecs_patterns from 'aws-cdk-lib/aws-ecs-patterns';
-import { FargateService } from 'aws-cdk-lib/aws-ecs';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import { AwsLogDriver, FargateService } from 'aws-cdk-lib/aws-ecs';
 import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { ApplicationListener, ApplicationProtocol } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 export class ServerStack extends NestedStack {
     service: FargateService;
@@ -68,6 +71,29 @@ export class ServerStack extends NestedStack {
             protocol: ecs.Protocol.TCP
         });
 
+        
+        // Add FireLens Log Router (FluentBit & FluentD -> FireLens Router)
+        // taskDefinition.addFirelensLogRouter('FireLens-Router', {
+        //     image: ecs.obtainDefaultFluentBitECRImage(taskDefinition),
+        //     essential: true,
+        //     firelensConfig: {
+        //         type: ecs.FirelensLogRouterType.FLUENTBIT
+        //     },
+        //     logging: new AwsLogDriver({
+        //         streamPrefix: 'jinsparklab-firelens',
+        //         logRetention: logs.RetentionDays.THREE_MONTHS
+        //     })
+        // });
+        //
+
+        const albSecurityGroup = new ec2.SecurityGroup(scope, 'JinsparkLabAlbSecurityGroup', {
+            vpc,
+            description: 'Security Group for Jinspark Lab Alb',
+            allowAllOutbound: true
+        });
+        albSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'allow http from internet');
+        albSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443), 'allow https from internet');
+
         const alb = new elb.ApplicationLoadBalancer(scope, 'JinsparkLabAlb', {
             loadBalancerName: 'JinsparkLab-ALB',
             vpc,
@@ -75,8 +101,20 @@ export class ServerStack extends NestedStack {
                 subnetType: ec2.SubnetType.PUBLIC,
                 onePerAz: true
             },
-            internetFacing: true
+            internetFacing: true,
+            securityGroup: albSecurityGroup
         });
+        // FIXME: Certificate Fix
+        // alb.addListener('httpListener', {
+        //     port: 80
+        // });
+        // alb.addListener('httpsListener', {
+        //     port: 443,
+        //     protocol: ApplicationProtocol.HTTPS,
+        //     certificates: [
+        //         elb.ListenerCertificate.fromArn('arn:aws:acm:us-east-1:486403792456:certificate/d9ecc605-46da-429b-aea3-0559bcc09747')
+        //     ]
+        // });
 
         const fargate = new ecs_patterns.ApplicationLoadBalancedFargateService(scope, "JinsparkLabFargate", {
             cluster,
