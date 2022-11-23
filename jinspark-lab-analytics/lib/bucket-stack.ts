@@ -11,9 +11,7 @@ export class BucketStack extends NestedStack {
         const firehoseBucket = new s3.Bucket(this, 'jinspark-lab-firehose-bucket', {
             bucketName: 'jinspark-lab-firehose-bucket',
             encryption: s3.BucketEncryption.S3_MANAGED,
-            blockPublicAccess: new s3.BlockPublicAccess({
-                blockPublicPolicy: true
-            }),
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
             removalPolicy: RemovalPolicy.DESTROY, //Auto delete bucket when CFN destroyed.
             autoDeleteObjects: true,              //Auto delete objects when CFN destroyed.
             objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED

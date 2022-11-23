@@ -11,9 +11,7 @@ export class BaseStack extends Stack {
     const bucket = new s3.Bucket(this, 'jinspark-lab-infra-artifact-bucket', {
       bucketName: 'jinspark-lab-infra-artifact-bucket',
       encryption: s3.BucketEncryption.S3_MANAGED,
-      blockPublicAccess: new s3.BlockPublicAccess({
-          blockPublicPolicy: true
-      }),
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: RemovalPolicy.DESTROY, //Auto delete bucket when CFN destroyed.
       autoDeleteObjects: true,              //Auto delete objects when CFN destroyed.
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED

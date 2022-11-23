@@ -20,7 +20,6 @@ export class ServerStack extends NestedStack {
         super(scope, id, props);
 
         // ECS Deployment
-        // const vpc = ec2.Vpc.fromLookup(scope, 'Default', { isDefault: true });
         const cluster = new ecs.Cluster(scope, 'Fargate', { vpc });
 
         const taskDefinitionRole = new iam.Role(scope, 'MyFargateExecutionRole', {
@@ -45,12 +44,16 @@ export class ServerStack extends NestedStack {
                 })
             ]
         }));
+
+        // IAM Role for Container
+        // As for S3 bucket Access, that would be controlled by AccountRootPrincipal ACL
         const taskRole = new iam.Role(scope, 'MyFargateTaskRole', {
             assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
             description: 'Jinspark-lab Fargate Task Role',
             managedPolicies: [
                 ManagedPolicy.fromAwsManagedPolicyName('SecretsManagerReadWrite'),
-                ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMFullAccess')
+                ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMFullAccess'),
+                ManagedPolicy.fromAwsManagedPolicyName('AmazonKinesisFirehoseFullAccess')
             ]
         });
 
@@ -70,21 +73,6 @@ export class ServerStack extends NestedStack {
             // hostPort: 80,                 //awsvpc networkmode should use same port as container port.
             protocol: ecs.Protocol.TCP
         });
-
-        
-        // Add FireLens Log Router (FluentBit & FluentD -> FireLens Router)
-        // taskDefinition.addFirelensLogRouter('FireLens-Router', {
-        //     image: ecs.obtainDefaultFluentBitECRImage(taskDefinition),
-        //     essential: true,
-        //     firelensConfig: {
-        //         type: ecs.FirelensLogRouterType.FLUENTBIT
-        //     },
-        //     logging: new AwsLogDriver({
-        //         streamPrefix: 'jinsparklab-firelens',
-        //         logRetention: logs.RetentionDays.THREE_MONTHS
-        //     })
-        // });
-        //
 
         const albSecurityGroup = new ec2.SecurityGroup(scope, 'JinsparkLabAlbSecurityGroup', {
             vpc,

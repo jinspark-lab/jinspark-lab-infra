@@ -67,7 +67,9 @@ export class CICDStack extends NestedStack {
             new iam.PolicyStatement({
                 actions: [
                     'secretsmanager:DescribeSecret',
-                    'secretsmanager:GetSecretValue'
+                    'secretsmanager:GetSecretValue',
+                    "s3:ListAllMyBuckets",
+                    "s3:ListBucket"
                 ],
                 resources: ['*'],
                 effect: iam.Effect.ALLOW

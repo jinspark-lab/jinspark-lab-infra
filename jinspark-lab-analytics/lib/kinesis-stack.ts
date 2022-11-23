@@ -68,6 +68,7 @@ export class KinesisStack extends NestedStack {
         );
 
         const deliveryStream = new firehose.CfnDeliveryStream(scope, 'Jinsparklab-Backend-Stream', {
+            deliveryStreamName: 'JinsparkLabFirehose',
             amazonopensearchserviceDestinationConfiguration: {
                 indexName: 'backend_logs',
                 domainArn: elasticsearchDomain,
