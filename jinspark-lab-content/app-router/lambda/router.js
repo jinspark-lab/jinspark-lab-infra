@@ -1,41 +1,66 @@
 
 const AWS = require('aws-sdk');
+const dynamodb = new AWS.DynamoDB({ apiVersion: '2012-08-10' });
 
 exports.handler = async function (event, context) {
+    const responseHeader = {
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+    };
+    const errorHandler = (err) => {
+        console.log(err);
+        resolve({
+            statusCode: 400,
+            headers: responseHeader,
+            body: JSON.stringify(err)
+        });
+    };
+
     return new Promise(function (resolve, reject) {
         try {
-            console.log("Event");
-            console.log(event);
-            console.log("Context");
-            console.log(context);
-            const redirectUrl = "https://www.naver.com";
+            const contentId = event.pathParameters.contentId;
+            const requestId = event.requestContext.requestId;
 
-            const responseHeader = {
-                "Access-Control-Allow-Headers": "*",
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
-                "Location": redirectUrl
-            };
-            const responseBody = {
-            };
+            console.log("ContentId : " + contentId);
+            console.log("RequestId : " + requestId);
 
-            resolve({
-                statusCode: 307,
-                headers: responseHeader,
-                body: JSON.stringify(responseBody)
+            dynamodb.getItem({
+                TableName: 'SharableDDB',
+                Key: {
+                    'UUID': { S: '' + contentId }
+                }
+                // ProjectionExpression: 'contentUrl'
+            }, function (err, data) {
+                if (err) {
+                    errorHandler(err);
+                } else {
+                    if (data.Item.shared.BOOL) {
+                        const responseBody = {
+                            "userId": data.Item.userId.S,
+                            "contentType": data.Item.contentType.S,
+                            "contentUrl": data.Item.contentUrl.S + '/' + contentId
+                        };
+                        resolve({
+                            statusCode: 200,
+                            headers: responseHeader,
+                            body: JSON.stringify(responseBody)
+                        });
+                    } else {
+                        const responseBody = {
+                            "message": "contentId : " + contentId + " Is not shared.",
+                            "requestId": requestId
+                        };
+                        resolve({
+                            statusCode: 200,
+                            headers: responseHeader,
+                            body: JSON.stringify(responseBody)
+                        });
+                    }
+                }
             });
-
         } catch (err) {
-            console.log(err);
-            resolve({
-                statusCode: 400,
-                headers: {
-                    "Access-Control-Allow-Headers": "*",
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "OPTIONS,POST,GET",
-                },
-                body: JSON.stringify(err)
-            });
+            errorHandler(err);
         }
     });
 }

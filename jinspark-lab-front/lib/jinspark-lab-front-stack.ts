@@ -21,12 +21,6 @@ export class JinsparkLabFrontStack extends Stack {
             artifactBucket: s3.Bucket.fromBucketName(this, 'JinsparkLabFrontendArtifactBucket', 'jinspark-lab-infra-artifact-bucket')
         });
 
-        // Source
-        const repository = new codecommit.Repository(this, 'JinsparkLabFrontendRepo', {
-            repositoryName: 'JinsparkLabFrontendRepo',
-            description: 'JinsparkLab Frontend Repository'
-        });
-
         const sourceOutput = new codepipeline.Artifact();
         const sourceAction = new codepipelineActions.GitHubSourceAction({
             actionName: 'GithubSource',
@@ -84,6 +78,7 @@ export class JinsparkLabFrontStack extends Stack {
 
         // Change bucket name global unique.
         const bucket = new s3.Bucket(this, 'jinsparklab-frontend', {
+            bucketName: 'jinspark-lab-frontend-stack',
             encryption: s3.BucketEncryption.S3_MANAGED,
             blockPublicAccess: new s3.BlockPublicAccess({
                 blockPublicPolicy: true

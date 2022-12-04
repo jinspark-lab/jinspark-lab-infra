@@ -69,7 +69,10 @@ export class CICDStack extends NestedStack {
                     'secretsmanager:DescribeSecret',
                     'secretsmanager:GetSecretValue',
                     "s3:ListAllMyBuckets",
-                    "s3:ListBucket"
+                    "s3:ListBucket",
+                    "dynamodb:GetItem",
+                    "dynamodb:List*",
+                    "dynamodb:Describe*"
                 ],
                 resources: ['*'],
                 effect: iam.Effect.ALLOW

@@ -1,7 +1,6 @@
 import { NestedStack, NestedStackProps, } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
-import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
@@ -11,7 +10,6 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { AwsLogDriver, FargateService } from 'aws-cdk-lib/aws-ecs';
 import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { ApplicationListener, ApplicationProtocol } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 export class ServerStack extends NestedStack {
     service: FargateService;
@@ -53,7 +51,8 @@ export class ServerStack extends NestedStack {
             managedPolicies: [
                 ManagedPolicy.fromAwsManagedPolicyName('SecretsManagerReadWrite'),
                 ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMFullAccess'),
-                ManagedPolicy.fromAwsManagedPolicyName('AmazonKinesisFirehoseFullAccess')
+                ManagedPolicy.fromAwsManagedPolicyName('AmazonKinesisFirehoseFullAccess'),
+                ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBFullAccess')
             ]
         });
 
