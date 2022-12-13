@@ -37,6 +37,7 @@ exports.handler = async function (event, context) {
                 } else {
                     if (data.Item.shared.BOOL) {
                         const responseBody = {
+                            "status": 200,
                             "userId": data.Item.userId.S,
                             "contentType": data.Item.contentType.S,
                             "contentUrl": data.Item.contentUrl.S + '/' + contentId
@@ -48,6 +49,7 @@ exports.handler = async function (event, context) {
                         });
                     } else {
                         const responseBody = {
+                            "status": 400,
                             "message": "contentId : " + contentId + " Is not shared.",
                             "requestId": requestId
                         };
