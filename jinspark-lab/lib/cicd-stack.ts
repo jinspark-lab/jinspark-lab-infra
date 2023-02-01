@@ -72,7 +72,9 @@ export class CICDStack extends NestedStack {
                     "s3:ListBucket",
                     "dynamodb:GetItem",
                     "dynamodb:List*",
-                    "dynamodb:Describe*"
+                    "dynamodb:Describe*",
+                    "dynamodb:PutItem",
+                    "sqs:SendMessage"
                 ],
                 resources: ['*'],
                 effect: iam.Effect.ALLOW

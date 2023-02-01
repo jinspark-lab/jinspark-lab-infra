@@ -1,3 +1,4 @@
 {
-    "profileDatabase": "JinsparkLabProfileTable"
+    "profileDatabase": "JinsparkLabProfileTable",
+    "blogDatabase": "JinsparkLabBlogTable"
 }

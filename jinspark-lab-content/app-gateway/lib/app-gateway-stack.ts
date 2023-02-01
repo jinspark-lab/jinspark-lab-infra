@@ -15,6 +15,7 @@ export class AppGatewayStack extends cdk.Stack {
         super(scope, id, props);
 
         var profileLambdaIntegration = this.buildProfileApi();
+        var blogLambdaIntegration = this.buildBlogApi();
 
         // API Gateway
         var api = new apigateway.RestApi(this, 'AppGatewayApi', {
@@ -32,6 +33,10 @@ export class AppGatewayStack extends cdk.Stack {
         const profileResource = api.root.addResource('profile');
         const profileIdResource = profileResource.addResource('{contentId}');
         profileIdResource.addMethod('GET', profileLambdaIntegration);
+
+        const blogResource = api.root.addResource('blog');
+        const blogIdResource = blogResource.addResource('{contentId}');
+        blogIdResource.addMethod('GET', blogLambdaIntegration);
     }
 
     buildProfileApi() {
@@ -63,5 +68,37 @@ export class AppGatewayStack extends cdk.Stack {
             partitionKey: { name: 'UUID', type: dynamodb.AttributeType.STRING }
         });
         return new apigateway.LambdaIntegration(profileLambda);
+    }
+
+    buildBlogApi() {
+        // Lambda Role
+        const blogRole = new iam.Role(this, 'BlogLambdaRole', {
+            description: 'Lambda Task Role for Blog Lambda',
+            assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+            managedPolicies: [
+                ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+                ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaRole'),
+                ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBReadOnlyAccess')
+            ]
+        });
+        
+        // Lambda Function
+        var blogLambda = new lambda.Function(this, 'BlogLambda', {
+            functionName: 'jinsparklab-app-blog',
+            runtime: lambda.Runtime.NODEJS_16_X,
+            handler: 'app.handler',
+            code: lambda.Code.fromAsset(path.join(__dirname, '/../src/blog')),
+            timeout: cdk.Duration.seconds(300),
+            role: blogRole
+        });
+
+        // Database
+        const tableName = this.node.tryGetContext('blogDatabase');
+        const table = new dynamodb.Table(this, 'BlogDDB', {
+            tableName,
+            partitionKey: { name: 'UUID', type: dynamodb.AttributeType.STRING }
+        });
+        return new apigateway.LambdaIntegration(blogLambda);
+
     }
 }

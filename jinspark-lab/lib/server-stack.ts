@@ -97,9 +97,9 @@ export class ServerStack extends NestedStack {
         // });
         // alb.addListener('httpsListener', {
         //     port: 443,
-        //     protocol: ApplicationProtocol.HTTPS,
+        //     protocol: elb.ApplicationProtocol.HTTPS,
         //     certificates: [
-        //         elb.ListenerCertificate.fromArn('arn:aws:acm:us-east-1:486403792456:certificate/d9ecc605-46da-429b-aea3-0559bcc09747')
+        //         elb.ListenerCertificate.fromArn('arn:aws:acm:us-east-1:486403792456:certificate/ff25a67e-dcb9-439a-9759-72c03197406d')
         //     ]
         // });
 

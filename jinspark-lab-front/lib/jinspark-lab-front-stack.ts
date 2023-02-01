@@ -2,12 +2,16 @@ import { aws_cloudfront_origins, Duration, SecretValue, RemovalPolicy, Stack, St
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as elb from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as codecommit from 'aws-cdk-lib/aws-codecommit';
+import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
 import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as codepipelineActions from 'aws-cdk-lib/aws-codepipeline-actions';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
+import { OriginAccessIdentity, OriginSslPolicy } from 'aws-cdk-lib/aws-cloudfront';
+import { LoadBalancerV2Origin } from 'aws-cdk-lib/aws-cloudfront-origins';
 
 export class JinsparkLabFrontStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -126,18 +130,68 @@ export class JinsparkLabFrontStack extends Stack {
             queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
         });
 
+        // SSL Certificate
+        const certificate = acm.Certificate.fromCertificateArn(this, 'JinsparkLabAcm', 
+                        'arn:aws:acm:us-east-1:486403792456:certificate/ff25a67e-dcb9-439a-9759-72c03197406d');
+
         // CodePipeline does not natively support CF Invalidation after S3 deployment
         // You should put CodeBuild on Deployment stage and run invalidation CLI script if you want to automate
         // https://docs.aws.amazon.com/cdk/api/v1/docs/aws-codepipeline-actions-readme.html#aws-s3-deployment
+        const s3Origin = new aws_cloudfront_origins.S3Origin(bucket);
+
         const cf = new cloudfront.Distribution(this, 'JinsparkLabFrontendCF', {
             defaultBehavior: {
-                origin: new aws_cloudfront_origins.S3Origin(bucket),    //Automatically Put OAI for S3 Bucket
+                origin: s3Origin,    //Automatically Put OAI for S3 Bucket
                 originRequestPolicy: cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
                 allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                 viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-                cachePolicy: frontendCachePolicy,
+                cachePolicy: frontendCachePolicy
             },
+            certificate,
+            domainNames: ['www.jinsparklab.com'],
+            defaultRootObject: 'index.html',
             comment: 'Jinsparklab CDN'
+        });
+
+        // Getting ALB from existing Backend Stack
+        // const alb = elb.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, 'ALBOrigin', {
+        //     loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:486403792456:loadbalancer/app/JinsparkLabALB/507b7c532f5d74d2',
+        //     loadBalancerDnsName: 'JinsparkLabALB-1557950170.us-east-1.elb.amazonaws.com',
+        //     securityGroupId: 'sg-05d1ab6d83043179f '
+        // });
+        const alb = elb.ApplicationLoadBalancer.fromLookup(this, 'ALBOrigin', {
+            loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:486403792456:loadbalancer/app/JinsparkLabALB/507b7c532f5d74d2'
+        });
+        const albOrigin = new LoadBalancerV2Origin(alb);
+
+        // Change Cache Policy as required (JinsparkLabBackendCachePolicy)
+        cf.addBehavior('/api*', albOrigin, {
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+            cachePolicy: backendCachePolicy,
+            originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER
+        });
+        cf.addBehavior('/login/*', albOrigin, {
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+            cachePolicy: backendCachePolicy,
+            originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER
+        });
+
+        // Keep Cache Policy as CachingDisabled
+        cf.addBehavior('/health', albOrigin, {
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER
+        });
+
+        // Sharable -> S3 Frontend
+        cf.addBehavior('/share/*', s3Origin, {
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+            originRequestPolicy: cloudfront.OriginRequestPolicy.CORS_S3_ORIGIN,
         });
 
         new cdk.CfnOutput(this, 'CloudFrontDns', { value: cf.domainName });
