@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jinsparklab-kubedeploy-service
+spec:
+  externalIPs: []
+  ports:
+    - port: 8080
+      protocol: TCP
+  selector:
+    cdk8s.io/metadata.addr: jinsparklab-KubeDeploy
+    app.kubernetes.io/name: jinsparklab
+  type: NodePort

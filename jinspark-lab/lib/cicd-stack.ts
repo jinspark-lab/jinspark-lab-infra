@@ -1,6 +1,7 @@
 import { Duration, NestedStack, NestedStackProps, SecretValue } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as eks from 'aws-cdk-lib/aws-eks';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as codebuild from 'aws-cdk-lib/aws-codebuild';
@@ -11,7 +12,7 @@ import { FargateService } from 'aws-cdk-lib/aws-ecs';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
 
 export class CICDStack extends NestedStack {
-    constructor(scope: Construct, id: string, vpc: IVpc, containerRepo: Repository, service: FargateService, props?: NestedStackProps) {
+    constructor(scope: Construct, id: string, vpc: IVpc, containerRepo: Repository, cluster: eks.Cluster, props?: NestedStackProps) {
         super(scope, id, props);
 
         const pipeline = new codepipeline.Pipeline(scope, 'JinsparkLabPipeline', {
@@ -44,6 +45,10 @@ export class CICDStack extends NestedStack {
             //                       .andBranchIs('main')
             // ]
         });
+        const projectSecurityGroup = new ec2.SecurityGroup(scope, 'JinsparkLabBuildSG', {
+            vpc,
+            allowAllOutbound: true
+        });
         const project = new codebuild.Project(scope, 'JinsparkLabBuild', {
             projectName: 'jinspark-lab-build',
             source: githubSource,
@@ -53,6 +58,9 @@ export class CICDStack extends NestedStack {
                 privileged: true
             },
             vpc,
+            securityGroups: [
+                projectSecurityGroup
+            ],
             environmentVariables: {
                 ecr: {
                     value: containerRepo.repositoryUri
@@ -74,12 +82,19 @@ export class CICDStack extends NestedStack {
                     "dynamodb:List*",
                     "dynamodb:Describe*",
                     "dynamodb:PutItem",
-                    "sqs:SendMessage"
+                    "sqs:SendMessage",
+                    "eks:UpdateClusterConfig",
+                    "eks:DescribeCluster",
+                    "eks:ListClusters"
                 ],
                 resources: ['*'],
                 effect: iam.Effect.ALLOW
             })
         );
+        cluster.awsAuth.addMastersRole(project.role!);
+        cluster.clusterSecurityGroup.addIngressRule(
+            ec2.Peer.securityGroupId(projectSecurityGroup.securityGroupId), 
+            ec2.Port.allTraffic(), "Traffic from CodeBuild");
 
         const buildOutput = new codepipeline.Artifact();
         const buildAction = new codepipelineActions.CodeBuildAction({
@@ -93,17 +108,17 @@ export class CICDStack extends NestedStack {
             actions: [buildAction]
         });
 
-        const deployAction = new codepipelineActions.EcsDeployAction({
-            actionName: 'EcsDeploy',
-            service: service,
-            input: buildOutput,
-            deploymentTimeout: Duration.minutes(60)
-        });
-        pipeline.addStage({
-            stageName: 'Deploy',
-            actions: [
-                deployAction
-            ]
-        });
+        // const deployAction = new codepipelineActions.EcsDeployAction({
+        //     actionName: 'EcsDeploy',
+        //     service: service,
+        //     input: buildOutput,
+        //     deploymentTimeout: Duration.minutes(60)
+        // });
+        // pipeline.addStage({
+        //     stageName: 'Deploy',
+        //     actions: [
+        //         deployAction
+        //     ]
+        // });
     }
 }
