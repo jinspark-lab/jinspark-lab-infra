@@ -2,6 +2,8 @@ import { Stack, StackProps, SecretValue } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import { aws_elasticache as elasticache } from 'aws-cdk-lib';
+import { IpAddressType } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 export class JinsparkLabDbStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -36,6 +38,18 @@ export class JinsparkLabDbStack extends Stack {
       credentials: rds.Credentials.fromGeneratedSecret('admin', {
         secretName: 'jinsparklab-rdb-secret'
       })
+    });
+
+    // NOTE : Currently L1 Constructor only supports default VPC deployment. 
+    // https://docs.aws.amazon.com/cdk/api/v2/docs/aws-cdk-lib.aws_elasticache-readme.html
+    const redis = new elasticache.CfnCacheCluster(this, 'JinsparkLabRedis', {
+      cacheNodeType: 'cache.t4g.medium',
+      engine: 'redis',
+      numCacheNodes: 1,
+      vpcSecurityGroupIds: [
+        securityGroup.securityGroupId
+      ],
+      clusterName: 'jinspark-redis'
     });
   }
 }
