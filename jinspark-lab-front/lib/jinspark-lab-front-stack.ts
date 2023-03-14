@@ -150,19 +150,25 @@ export class JinsparkLabFrontStack extends Stack {
             certificate,
             domainNames: ['www.jinsparklab.com'],
             defaultRootObject: 'index.html',
+            errorResponses: [
+              {
+                httpStatus: 400,
+                responseHttpStatus: 200,
+                responsePagePath: '/index.html',
+                ttl: cdk.Duration.minutes(1)
+              },
+              {
+                httpStatus: 403,
+                responseHttpStatus: 200,
+                responsePagePath: '/index.html',
+                ttl: cdk.Duration.minutes(1)
+              }
+            ],
             comment: 'Jinsparklab CDN'
         });
 
-        // Getting ALB from existing Backend Stack
-        // const alb = elb.ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, 'ALBOrigin', {
-        //     loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:486403792456:loadbalancer/app/JinsparkLabALB/507b7c532f5d74d2',
-        //     loadBalancerDnsName: 'JinsparkLabALB-1557950170.us-east-1.elb.amazonaws.com',
-        //     securityGroupId: 'sg-05d1ab6d83043179f '
-        // });
-
         const alb = elb.ApplicationLoadBalancer.fromLookup(this, 'ALBOrigin', {
             loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:486403792456:loadbalancer/app/JinsparkLabALB/2a6cd73a7767cc2a'
-            // 'arn:aws:elasticloadbalancing:us-east-1:486403792456:loadbalancer/app/JinsparkLabALB/507b7c532f5d74d2'
         });
         const albOrigin = new LoadBalancerV2Origin(alb);
 

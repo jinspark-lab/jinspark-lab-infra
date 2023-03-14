@@ -1,8 +1,6 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BucketStack } from './bucket-stack';
-import { ContainerStack } from './container-stack';
-import { ServerStack } from './server-stack';
 import { CICDStack } from './cicd-stack';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { ClusterStack } from './cluster-stack';
@@ -13,8 +11,6 @@ export class JinsparkLabStack extends Stack {
 
         const vpc = ec2.Vpc.fromLookup(this, 'Default', { isDefault: true });
         var bucketStack = new BucketStack(this, id + '-Bucket');
-        // var containerStack = new ContainerStack(this, id + '-Container');
-        // var server = new ServerStack(this, id + '-Server', vpc);
         var cluster = new ClusterStack(this, id + '-Eks', vpc);
         var cicd = new CICDStack(this, id + '-CICD',
             vpc,
