@@ -39,6 +39,7 @@ export class ClusterStack extends NestedStack {
                 iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMFullAccess'),
                 iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonKinesisFirehoseFullAccess'),
                 iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonDynamoDBFullAccess'),
+                iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonS3FullAccess'),
                 // iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKSClusterPolicy'),
                 iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEKSWorkerNodePolicy'),
                 iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryReadOnly'),

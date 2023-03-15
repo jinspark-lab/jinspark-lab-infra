@@ -1,14 +1,18 @@
-# Welcome to your CDK TypeScript project
 
-This is a blank project for CDK development with TypeScript.
+## What is App Gateway?
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+AppGateway is application gateway to route services in centralized manner.
 
-## Useful commands
+Application made from JinsparkLab will be provisioned and routed inside of AppGateway Stack, and it is provided from Sharable Web Page.
 
-* `npm run build`   compile typescript to js
-* `npm run watch`   watch for changes and compile
-* `npm run test`    perform the jest unit tests
-* `cdk deploy`      deploy this stack to your default AWS account/region
-* `cdk diff`        compare deployed stack with current state
-* `cdk synth`       emits the synthesized CloudFormation template
+## Which App is provided?
+
+* Profile
+: Profile is made from JinsparkLab page. If user marked to share their profile publicly, the content will be shared through AppGateway.
+
+* blog
+: Blog is written from JinsparkLab page. If user marked to share the article publicly, the content will be shared through AppGateway.
+
+* UserApp
+: When user create Application and register it to JinsparkLab page and mark it to share publicly, the content will be shared through AppGateway.
+
